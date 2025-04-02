@@ -1,0 +1,39 @@
+import express, {Router,Request, Response} from 'express';
+import AuthController from '@controllers/AuthController';
+import HotelController from '@controllers/HotelController';
+import BookingController from '@controllers/BookingController';
+import {authMiddleware} from '@middleware/auth.middleware';
+
+const router: Router = express.Router();
+const authController = new AuthController();
+const hotelController = new HotelController();
+const bookingController = new BookingController();
+router.post('/signup', (req, res) => {
+    authController.register(req, res);
+});
+router.post('/login', (req, res) => {
+    authController.login(req, res);
+});
+router.get('/name*', (req, res) => {
+    hotelController.getHotelByName(req, res);
+});
+router.get('/location*', (req, res) => {
+    hotelController.getHotelByLocation(req, res);
+});
+router.get("/roomtype/:hotel_id", (req, res) => {
+    hotelController.getRoomTypeByHotelId(req, res);
+});
+router.get("/booking/location", (req, res) => {
+    bookingController.searchAvailableRooms(req, res);
+});
+router.get("/booking/hotel", (req, res) => {
+    bookingController.searchRoomAvailableWithRoomType(req, res);
+});
+router.get("/hotel/list", authMiddleware , (req, res) => {
+    hotelController.getAllHotel(req, res);
+});
+router.get("/user/info", (req, res) => {
+    authController.getUserInfor(req, res);
+});
+export default router;
+
