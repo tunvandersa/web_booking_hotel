@@ -7,7 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { Bookings } from "./Bookings";
+import { BookingDetail } from "./BookingDetails";
 import { Hotels } from "./Hotels";
 import { RoomTypes } from "./RoomTypes";
 
@@ -57,8 +57,8 @@ export class Rooms {
   })
   updatedAt?: Date | null;
 
-  @OneToMany(() => Bookings, (bookings) => bookings.room)
-  bookings?: Bookings[];
+  @OneToMany(() => BookingDetail, (bookingDetail) => bookingDetail.room)
+  bookingDetails?: BookingDetail[];
 
   @ManyToOne(() => Hotels, (hotels) => hotels.rooms, {
     onDelete: "NO ACTION",

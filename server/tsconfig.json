@@ -35,7 +35,7 @@
       "@entities/*": ["src/entity/entities/*"],
       "@routers/*": ["src/routes/*"],
       "@databases/*": ["src/databases/*"],
-      "@dto/*": ["src/dto/*"],
+      "@dto/*": ["src/interface/*"],
       "@middleware/*": ["src/middleware/*"],
      },                                       /* Specify a set of entries that re-map imports to additional lookup locations. */
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */

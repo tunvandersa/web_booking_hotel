@@ -85,7 +85,7 @@ export class Hotels {
     default: () => "CURRENT_TIMESTAMP",
   })
   updatedAt?: Date | null;
-
+ 
   @OneToMany(
     () => HotelAmenityMapping,
     (hotelAmenityMapping) => hotelAmenityMapping.hotel

@@ -6,7 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { Bookings } from "./Bookings";
+import { BookingDetail } from "./BookingDetails";
 
 @Index("booking_id", ["bookingId"], {})
 @Entity("payments", { schema: "db_hotel_booking" })
@@ -56,10 +56,10 @@ export class Payments {
   })
   paymentDate?: Date | null;
 
-  @ManyToOne(() => Bookings, (bookings) => bookings.payments, {
+  @ManyToOne(() => BookingDetail, (bookingDetail) => bookingDetail.payments, {
     onDelete: "NO ACTION",
     onUpdate: "NO ACTION",
   })
   @JoinColumn([{ name: "booking_id", referencedColumnName: "id" }])
-  booking?: Bookings;
+  bookingDetail?: BookingDetail;
 }
