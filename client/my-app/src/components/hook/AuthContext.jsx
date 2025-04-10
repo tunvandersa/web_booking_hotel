@@ -5,7 +5,7 @@ import axios from 'axios';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState('');
 
     const checkAuth = async () => {
         try {
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
             if (response.data != null) {
                 setUser(response.data); 
             } else {
-                setUser(null);
+                setUser('');
             }
         } catch (error) {
             console.error('Lỗi khi kiểm tra xác thực:', error);
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     const logout = async (data) => {
         try {
             await axios.post('http://localhost:3000/logout', {}, { withCredentials: true });
-            setUser(null);
+            setUser('');
         } catch (error) {
             console.error('Lỗi khi đăng xuất:', error);
         }

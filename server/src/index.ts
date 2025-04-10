@@ -42,6 +42,8 @@ console.log(e);
 console.error('Error while connecting to the database')
 process.exit(1)  // exit with error code 1 to indicate failure to connect to the database
 });
+
+
 app.use('/api/v1', router);
 
 app.listen(port, () => {

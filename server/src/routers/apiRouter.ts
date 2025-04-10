@@ -55,5 +55,8 @@ router.get("/booking/cksession", (req, res) => {
 router.post("/booking/deleteroom", (req, res) => {
     bookingController.deleteRoomFromSession(req, res);
 });
+router.post("/booking/save", (req, res) => {
+    bookingController.saveBooking(req, res);
+});
 export default router;
 

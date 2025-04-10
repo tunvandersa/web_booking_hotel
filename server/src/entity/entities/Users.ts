@@ -11,7 +11,7 @@ import { Bookings } from "./Bookings";
 @Entity("users", { schema: "db_hotel_booking" })
 export class Users {
   @PrimaryGeneratedColumn({ type: "bigint", name: "id" })
-  id?: string;
+  id?: number;
 
   @Column("varchar", { name: "first_name", comment: "Tên", length: 50 })
   firstName?: string;

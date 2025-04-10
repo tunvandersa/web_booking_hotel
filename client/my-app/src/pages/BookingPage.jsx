@@ -11,13 +11,51 @@ const BookingPage = () => {
   const [endDate, setEndDate] = useState(searchParams.get("checkout") ? new Date(searchParams.get("checkout")) : null);
   const [hotelId, setHotelId] = useState(searchParams.get("hotelid") || "");
   const [roomSearchNumber, setRoomSearchNumber] = useState(searchParams.get("room") || 1);
-  const [hotels, setHotels] = useState();
+  const [hotels, setHotels] = useState(null);
   const [roomType, setRoomType] = useState([]);
   const navigate = useNavigate();
   const [showBookingDetails, setShowBookingDetails] = useState({});
   const [roomNumber, setRoomNumber] = useState({});
+  const [bookingSession, setBookingSession] = useState(() => {
+    const savedSession = localStorage.getItem('bookingSession');
+    return savedSession ? JSON.parse(savedSession) : null;
+  });
 
-   const formatDate = (date) => {
+  useEffect(() => {
+    if (bookingSession) {
+      localStorage.setItem('bookingSession', JSON.stringify(bookingSession));
+    } else {
+      localStorage.removeItem('bookingSession');
+    }
+  }, [bookingSession]);
+
+  const handleDeleteRoom = async (index, roomTypeId) => {
+    try {
+      const response = await axios.post('http://localhost:3000/api/v1/booking/deleteroom', {
+        index,
+        roomTypeId
+      }, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data) {
+        setBookingSession(response.data.booking);
+        console.log('Đã xóa phòng khỏi session:', response.data);
+      }
+    } catch (error) {
+      console.error('Lỗi khi xóa phòng:', error);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi xóa phòng');
+    }
+  };
+
+  const formatCurrency = (number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(number);
+  };
+
+  const formatDate = (date) => {
     if (!date) return "";
     return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
   };
@@ -49,8 +87,6 @@ const BookingPage = () => {
       }
       if (response.data.hotel) {
         setHotels(response.data.hotel);
-      } else {
-        setHotels([]);
       }
       console.log("hotel:", hotels);
       if (window.location.search !== `?${params.toString()}`) {
@@ -62,24 +98,76 @@ const BookingPage = () => {
     }
   };
 
+  const handleHotelIdChange = (e) => {
+    setHotelId(e.target.value);
+  }
   useEffect(() => {
-    if(location && startDate && endDate && roomSearchNumber){
+    if (hotelId && startDate && endDate && roomSearchNumber) {
       handleSearch();
     }
   }, []);
 
-  const toggleBookingDetails = (roomId) => {
+  const toggleBookingDetails = (roomTypeId) => {
     setShowBookingDetails(prev => ({
       ...prev,
-      [roomId]: !prev[roomId]
+      [roomTypeId]: !prev[roomTypeId]
     }));
   };
 
-  const handleRoomNumberChange = (roomId, value) => {
+  const handleRoomNumberChange = (roomTypeId, value) => {
     setRoomNumber(prev => ({
       ...prev,
-      [roomId]: value,
+      [roomTypeId]: value,
     }));
+  };
+
+  const handleAddRoomToSession = async (room, index) => {
+    try {
+      // Validate dữ liệu
+      if (!room || !room.roomTypeId || !roomNumber[room.roomTypeId]) {
+        throw new Error('Thiếu thông tin phòng');
+      }
+
+      // Lấy thông tin người lớn/trẻ em từ form
+      const adults = document.querySelector(`select[name="adults-${room.roomTypeId}-${index}"]`)?.value || 2;
+      const children = document.querySelector(`select[name="children-${room.roomTypeId}-${index}"]`)?.value || 0;
+      const infants = document.querySelector(`select[name="infants-${room.roomTypeId}-${index}"]`)?.value || 0;
+
+      console.log("adults", adults);
+      console.log("children", children);
+      console.log("infants", infants);
+
+      // Gọi API
+      const response = await axios.post('http://localhost:3000/api/v1/booking/addroom', {
+        hotelId: hotels?.id,
+        hotelName: hotels?.name,
+        checkIn: formatDate(startDate),
+        checkOut: formatDate(endDate),
+        index: index,
+        roomTypeId: room.roomTypeId,
+        roomTypeName: room.roomTypeName,
+        price: room.basePrice,
+        guests: {
+          adults: parseInt(adults),
+          children: parseInt(children),
+          infants: parseInt(infants)
+        }
+      }, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data) {
+        setBookingSession(response.data.booking);
+        // Hiển thị thông báo thành công
+        console.log('Đã thêm phòng vào session:', response.data);
+      }
+    } catch (error) {
+      console.error('Lỗi khi thêm phòng vào session:', error);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi thêm phòng');
+    }
   };
 
   return (
@@ -95,7 +183,7 @@ const BookingPage = () => {
               <select
                 className="w-full h-full pl-10  outline-none text-sm bg-white appearance-none  border border-gray-300 "
                 defaultValue={hotelId}
-                onChange={(e) => handleLocationChange(e)}
+                onChange={(e) => handleHotelIdChange(e)}
               >
                 <option value="" disabled >
                   Chọn điểm đến
@@ -150,26 +238,12 @@ const BookingPage = () => {
               <input
                 type="number"
                 className="w-full h-full px-2 pl-10 border border-gray-300 text-sm"
-                value={roomSearchNumber}  
+                value={roomSearchNumber}
                 min={1}
                 onChange={(e) => setRoomSearchNumber(Number(e.target.value))}
               />
             </div>
           </div>
-
-          {/* <div className="min-h-[90px]">
-              <label className="text-white mb-2 block text-sm h-8">Mã khuyến mãi/Voucher</label>
-              <div className="relative h-[42px] flex justify-center items-center">
-                <span className="absolute left-3 flex justify-center items-center  text-gray-400">
-                  <span className="material-icons text-[20px]">local_offer</span>
-                </span>
-                <input
-                  type="text"
-                  className="w-full h-full px-2 pl-10 rounded border border-gray-300 text-sm"
-                  placeholder="Nhập mã khuyến mãi"
-                />
-              </div>
-            </div> */}
           <div className="min-h-[90px] flex items-center justify-center pt-8 ">
             <button onClick={handleSearch} className="w-full h-[42px] bg-yellow-500 text-white hover:bg-yellow-600 flex items-center justify-center gap-2 text-sm font-medium">
               <span className="material-icons text-[20px]">search</span>
@@ -203,7 +277,7 @@ const BookingPage = () => {
                 <p className="text-gray-500 text-sm">Điện thoại: 0909090909</p>
               </div>
               <div className='text-gray-700 text-sm items-start'>
-                <p> Mường Thanh Luxury Hạ Long Centre như đôi cánh đại bàng vươn mình giữa Vịnh Hạ Long – nơi hai lần được UNESCO công nhận là di sản thiên nhiên thế giới. Mường Thanh Luxury Hạ Long Centre có kiến trúc độc đáo và quy Tọa lạc tại trung tâm du lịch Bãi Cháy, Mường Thanh Luxury Hạ Long Centre như đôi cánh đại bàng vươn mình giữa Vịnh Hạ Long – nơi hai lần được UNESCO công nhận là di sản thiên nhiên thế giới. Mường Thanh Luxury Hạ Long Centre có kiến trúc độc đáo và quy</p>
+                <p> Mường Thanh Grand Xala Hà Nội như đôi cánh đại bàng vươn mình giữa Vịnh Hạ Long – nơi hai lần được UNESCO công nhận là di sản thiên nhiên thế giới. Mường Thanh Luxury Hạ Long Centre có kiến trúc độc đáo và quy Tọa lạc tại trung tâm du lịch Bãi Cháy, Mường Thanh Luxury Hạ Long Centre như đôi cánh đại bàng vươn mình giữa Vịnh Hạ Long – nơi hai lần được UNESCO công nhận là di sản thiên nhiên thế giới. Mường Thanh Luxury Hạ Long Centre có kiến trúc độc đáo và quy</p>
               </div>
             </div>
           </div>
@@ -215,7 +289,7 @@ const BookingPage = () => {
       <div className='flex'>
         <div className='w-[70%] mt-5'>
           {roomType.map((room, index) => (
-            <div key={room.roomTypeId} className="space-y-6 ">
+            <div key={room.roomTypeId} className="space-y-6 mb-5 ">
               <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="flex p-4">
                   {/* Ảnh khách sạn */}
@@ -248,7 +322,7 @@ const BookingPage = () => {
                       <div className='flex  mt-10 justify-between'>
                         <p className='mr-20 text-xl text-yellow-500 font-bold'> Giá: {room.basePrice} VNĐ/đêm </p>
                         <button
-                          className="bg-[#F2A900] text-white px-5 py-2 rounded hover:bg-blue-900 text-base"
+                          className="bg-[#F2A900] text-white px-5 py-2 rounded hover:bg-blue-900"
                           onClick={() => toggleBookingDetails(room.roomTypeId)}
                         >
                           Chọn phòng
@@ -281,18 +355,21 @@ const BookingPage = () => {
                             <option key={index} value={index + 1}>Phòng {index + 1}</option>
                           ))}
                         </select>
-                        
+
                       </div>
                     </div>
                   </div>
                   <div className='overflow-y-auto max-h-[300px]'>
                     {Array.from({ length: roomNumber[room.roomTypeId] }).map((_, index) => (
-                      <div className='flex justify-around items-center py-4 bg-white border-t-2 border-gray-200 border-dashed  hover:bg-gray-100 '>
+                      <div key={index} className='flex justify-around items-center py-4 bg-white border-t-2 border-gray-200 border-dashed  hover:bg-gray-100 '>
                         <p>Chọn số người phòng {index + 1}</p>
                         <div className='flex-col'>
                           <p className='mb-2 whitespace-nowrap'>Người lớn</p>
-                          <select className='border border-black rounded p-1 min-w-[100px]'
-                            defaultValue={1}>
+                          <select
+                            className='border border-black rounded p-1 min-w-[100px]'
+                            defaultValue={1}
+                            name={`adults-${room.roomTypeId}-${index}`}
+                          >
                             <option value={1}>1</option>
                             <option value={2}>2</option>
                             <option value={3}>3</option>
@@ -300,8 +377,11 @@ const BookingPage = () => {
                         </div>
                         <div className='flex-col'>
                           <p className='mb-2 whitespace-nowrap'>Trẻ em (6-11 tuổi)</p>
-                          <select className='border border-black rounded p-1 min-w-[100px]'
-                            defaultValue={0}>
+                          <select
+                            className='border border-black rounded p-1 min-w-[100px]'
+                            defaultValue={0}
+                            name={`children-${room.roomTypeId}-${index}`}
+                          >
                             <option value={0}>0</option>
                             <option value={1}>1</option>
                             <option value={2}>2</option>
@@ -311,14 +391,19 @@ const BookingPage = () => {
                         <div className='flex-col '>
                           <p className='mb-2 whitespace-nowrap'>Em bé (dưới 6 tuổi)</p>
                           <select className='border border-black rounded p-1 min-w-[100px]'
-                            defaultValue={0}>
+                            defaultValue={0}
+                            name={`infants-${room.roomTypeId}-${index}`}
+                          >
                             <option value={0}>0</option>
                             <option value={1}>1</option>
                             <option value={2}>2</option>
                             <option value={3}>3</option>
                           </select>
                         </div>
-                        <button className=" bg-[#F2A900] text-white px-5 py-2 rounded hover:bg-blue-900">
+                        <button
+                          className="bg-[#F2A900] text-white px-5 py-2 rounded hover:bg-blue-900"
+                          onClick={() => handleAddRoomToSession(room, index)}
+                        >
                           Thêm phòng
                         </button>
                       </div>
@@ -333,17 +418,49 @@ const BookingPage = () => {
           <div className='bg-white rounded-lg shadow-md overflow-hidden p-5'>
             <p className='text-xl text-gray-700 font-semibold mb-3 mt-1'>Thông tin đặt phòng</p>
             <hr />
-            <p className='text-lg text-gray-700 font-semibold mb-1 mt-2'>Mường Thanh Luxury Hạ Long Centre</p>
-            <p className='text-gray-700 text-sm mb-3'>30/03/2025 - 31/03/2025</p>
-            <hr />
+            <p className='text-lg text-gray-700 font-semibold mb-1 mt-2'>{bookingSession?.hotel?.name || hotels?.name}</p>
+            <p className='text-gray-700 text-sm mb-3'>
+              {bookingSession?.checkIn ? new Date(bookingSession.checkIn).toLocaleDateString('vi-VN') : formatDate(startDate)} -
+              {bookingSession?.checkOut ? new Date(bookingSession.checkOut).toLocaleDateString('vi-VN') : formatDate(endDate)}
+            </p>
+            <hr />    
             <p className='text-lg text-gray-700 font-semibold mb-2 mt-2'>Thông tin phòng</p>
-            <hr />
+            <div className='space-y-3'>
+              {bookingSession?.rooms?.map((room, index) => (
+                <div key={`${room.roomTypeId}-${room.index}`} className='border-b pb-3'>
+                  <div className='flex justify-between items-center'>
+                    <p className='text-gray-700 font-medium'>{room.roomTypeName}</p>
+                    <button
+                      onClick={() => handleDeleteRoom(room.index, room.roomTypeId)}
+                      className='text-red-500 hover:text-red-700'
+                    >
+                      <span className="material-icons">delete</span>
+                    </button>
+                  </div>
+                  <p className='text-sm text-gray-600'>
+                    Người lớn: {room.guests?.adults || 0} |
+                    Trẻ em: {room.guests?.children || 0} |
+                    Em bé: {room.guests?.infants || 0}
+                  </p>
+                  <p className='text-yellow-500 font-medium'>{formatCurrency(room.price)}/đêm</p>
+                </div>
+              ))}
+              <div>
+              <p className='text-lg text-yellow-500 font-semibold'>Phụ thu người lớn: {formatCurrency(bookingSession?.extraAdultPrice || 0)}</p>
+              <p className='text-lg text-yellow-500 font-semibold'>Phụ thu trẻ em: {formatCurrency(bookingSession?.extraChildPrice || 0)}</p>
+              </div>
+            </div>
             <div className='flex justify-between items-center mb-3 mt-2'>
               <p className='text-lg text-gray-700 font-semibold'>Tổng cộng</p>
-              <p className='text-lg text-gray-700 font-semibold'>1,971,000 VND</p>
+              <p className='text-lg text-yellow-500 font-semibold'>{formatCurrency(bookingSession?.totalPrice || 0)}</p>
             </div>
 
-            <button className='bg-[#F2A900] w-full h-[42px] text-white px-5 py-2 text-lg font-semibold rounded hover:bg-blue-900'>Đặt phòng</button>
+            <button
+              className='bg-[#F2A900] w-full h-[42px] text-white px-5 py-2 text-lg font-semibold rounded hover:bg-blue-900'
+              disabled={!bookingSession?.rooms?.length}
+            >
+              Đặt phòng
+            </button>
           </div>
         </div>
         <div>

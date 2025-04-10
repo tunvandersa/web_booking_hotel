@@ -2,10 +2,34 @@ import { AppDataSource } from "@databases/data.source";
 import { Users } from "@entities/Users";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import nodemailer from 'nodemailer';
 
 const userRepository = AppDataSource.getRepository(Users);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+const sendVerificationEmail = async (email: string, name: string, token: string) => {
+  const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+  
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Xác thực email đăng ký',
+    html: `
+      <h1>Xin chào ${name}!</h1>
+      <p>Vui lòng nhấp vào liên kết sau để xác thực email của bạn:</p>
+      <a href="${verificationLink}">Xác thực email</a>
+    `
+  });
+};
 
 interface User {
     email: string;
@@ -25,6 +49,7 @@ interface DecodedToken {
 export class AuthService {
 
     async register(userData: User) {
+       
         const existingUser = await userRepository.findOne({
             where: { email: userData.email }
         });
@@ -60,7 +85,7 @@ export class AuthService {
 
     public async getUserInfor(token: string) {
         const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
-        const user = await userRepository.findOne({ where: { id: decoded.id } });
+        const user = await userRepository.findOne({ where: { id: Number(decoded.id) } });
         if(!user) {
             throw new Error("User not found");
         }else{

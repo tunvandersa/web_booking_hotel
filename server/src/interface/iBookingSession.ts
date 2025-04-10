@@ -9,7 +9,6 @@ export interface BookingSession {
       index: number;
       roomTypeId: string;
       roomTypeName: string;
-      roomNumber: number;
       guests: {
         adults: number;
         children: number;

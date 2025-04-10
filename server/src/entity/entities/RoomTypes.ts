@@ -11,10 +11,7 @@ import {
 } from "typeorm";
 import { RoomAmenityMapping } from "./RoomAmenityMapping";
 import { RoomImages } from "./RoomImages";
-import { Promotions } from "./Promotions";
-import { Hotels } from "./Hotels";
 import { Rooms } from "./Rooms";
-import { SeasonalPricing } from "./SeasonalPricing";
 
 @Entity("room_types", { schema: "db_hotel_booking" })
 export class RoomTypes {
@@ -92,22 +89,8 @@ export class RoomTypes {
   @OneToMany(() => RoomImages, (roomImages) => roomImages.roomType)
   roomImages?: RoomImages[];
 
-  @ManyToMany(() => Promotions, (promotions) => promotions.roomTypes)
-  @JoinTable({
-    name: "room_type_promotions",
-    joinColumns: [{ name: "room_type_id", referencedColumnName: "id" }],
-    inverseJoinColumns: [{ name: "promotion_id", referencedColumnName: "id" }],
-    schema: "db_hotel_booking",
-  })
-  promotions?: Promotions[];
-
 
   @OneToMany(() => Rooms, (rooms) => rooms.roomType)
   rooms?: Rooms[];
 
-  @OneToMany(
-    () => SeasonalPricing,
-    (seasonalPricing) => seasonalPricing.roomType
-  )
-  seasonalPricings?: SeasonalPricing[];
 }

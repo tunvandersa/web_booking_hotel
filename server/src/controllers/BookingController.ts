@@ -1,5 +1,6 @@
 import BookingService from "@services/booking.service";
 import { Request, Response } from "express";
+import {Users} from "@entities/Users"
 
 class BookingController {
     private bookingService: BookingService;
@@ -62,7 +63,7 @@ class BookingController {
     }
     public async addRoomToSession(req: Request, res: Response) {
         try {
-            const { hotelId, hotelName, checkIn, checkOut, roomNumber, index, roomTypeId, roomTypeName, price, guests } = req.body;
+            const { hotelId, hotelName, checkIn, checkOut, index, roomTypeId, roomTypeName, price, guests } = req.body;
         
             // Nếu session chưa tồn tại, tạo mới
             if (!req.session.booking) {
@@ -78,7 +79,6 @@ class BookingController {
                             index,
                             roomTypeId,
                             roomTypeName,
-                            roomNumber,
                             price,
                             guests,
                         }
@@ -94,7 +94,6 @@ class BookingController {
                 req.session.booking.extraAdultPrice = result.extraAdultPrice;
                 req.session.booking.extraChildPrice = result.extraChildPrice;
                 req.session.save();
-                console.log(req.session.booking);
             }
             if(req.session.booking) {
                 // Kiểm tra xem phòng đã tồn tại hay chưa
@@ -107,7 +106,6 @@ class BookingController {
                     index,
                     roomTypeId,
                     roomTypeName,
-                    roomNumber,
                     price,
                     guests,
                 };
@@ -119,6 +117,7 @@ class BookingController {
                     req.session.booking.extraAdultPrice = result.extraAdultPrice;
                     req.session.booking.extraChildPrice = result.extraChildPrice;
                     console.log(` Đã cập nhật phòng có index=${index} và roomTypeId=${roomTypeId}`);
+
                 } else {
                     // Nếu chưa có, thêm mới vào danh sách phòng
                     req.session.booking.rooms.push(newRoom);
@@ -129,7 +128,7 @@ class BookingController {
                     console.log(`Đã thêm phòng mới với index=${index} và roomTypeId=${roomTypeId}`);
                 }
                 req.session.save();
-                console.log(req.session.booking);
+                console.log("SessionBooking", req.session.booking);
                 return res.status(200).json({message: "Thêm phòng thành công", booking: req.session.booking});
             }
         } catch (error) {
@@ -155,6 +154,19 @@ class BookingController {
                 req.session.save();
                 return res.status(200).json({message: "Đã xóa phòng thành công", booking: req.session.booking});
             }
+        } catch (error: any) {
+            return res.status(500).json({message: error.message});
+        }
+    }
+    public async saveBooking(req: Request, res: Response) {
+        if(!req.session.booking) {
+            return res.status(400).json({message: "Không tìm thấy session"});
+        }
+        const user = new Users();
+        user.id = 1;
+        try {
+            const booking = await this.bookingService.saveBooking(req.session.booking, user);
+            return res.status(200).json({message: "Đã lưu booking thành công", booking});
         } catch (error: any) {
             return res.status(500).json({message: error.message});
         }

@@ -3,11 +3,10 @@ import {
   Entity,
   Index,
   JoinColumn,
-  ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { BookingDetail } from "./BookingDetails";
-
+import { Bookings } from "./Bookings";
 @Index("booking_id", ["bookingId"], {})
 @Entity("payments", { schema: "db_hotel_booking" })
 export class Payments {
@@ -56,10 +55,10 @@ export class Payments {
   })
   paymentDate?: Date | null;
 
-  @ManyToOne(() => BookingDetail, (bookingDetail) => bookingDetail.payments, {
+  @OneToOne(() => Bookings, (bookings) => bookings.payments, {
     onDelete: "NO ACTION",
     onUpdate: "NO ACTION",
   })
   @JoinColumn([{ name: "booking_id", referencedColumnName: "id" }])
-  bookingDetail?: BookingDetail;
+  booking?: Bookings;
 }

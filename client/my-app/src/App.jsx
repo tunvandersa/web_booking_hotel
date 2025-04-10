@@ -12,6 +12,9 @@ import Layout from "./components/layout/Layout";
 import LoginPage from "./pages/LoginPages"; 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Navbar from "./components/layout/Navbar";
+import ListHotel from "./pages/Hotel/ListHotel";
+import CreateHotel from "./pages/Hotel/CreateHotel";
 function App() {
   const [count, setCount] = useState(0);
 
@@ -36,12 +39,23 @@ function App() {
   };
 
   return (
+    // <BrowserRouter>
+    // <div className="flex">
+    //   <Navbar />
+    //   <Routes>
+    //     <Route path="/hotels" element={<ListHotel />} />
+    //     <Route path="/hotels/add" element={<CreateHotel />} />
+    //   </Routes>
+    // </div>
+    
+    // </BrowserRouter>
 
     <BrowserRouter>
     <ToastContainer/>
   <AuthProvider>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
       <Route element={<Layout />}>
         <Route path="/search" element={<SearchPage />} />
         <Route path="/hotel" element={<BookingPage />} />

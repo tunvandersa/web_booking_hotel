@@ -2,9 +2,17 @@ import { AppDataSource } from "@databases/data.source";
 import { Hotels } from "@entities/Hotels";
 import { Rooms } from "@entities/Rooms";
 import { BookingSession } from "../interface/iBookingSession";
+import { Bookings } from "@entities/Bookings";
+import { BookingDetail } from "@entities/BookingDetails";
+import { Users } from "@entities/Users";
+import AuthService from "./auth.service";
+
 
 const roomRepository = AppDataSource.getRepository(Rooms);
 const hotelRepository = AppDataSource.getRepository(Hotels);
+const bookingRepository = AppDataSource.getRepository(Bookings);
+const bookingDetailRepository = AppDataSource.getRepository(BookingDetail);
+
 
 class BookingService {
     public async searchAvailableRooms(searchParams: {
@@ -75,7 +83,7 @@ class BookingService {
                     { checkin: searchParams.checkin, checkout: searchParams.checkout }
                 )
                 .getMany();
-            
+
             const bookedRoomIds = unAvaliablerooms.length > 0 ? unAvaliablerooms.map(room => room.id) : [];
 
             // Query để lấy thông tin phòng và ảnh
@@ -89,7 +97,7 @@ class BookingService {
                 .addSelect("COUNT(DISTINCT room.id)", "totalRooms")
                 .addSelect("roomType.basePrice", "basePrice")
                 .addSelect("GROUP_CONCAT(DISTINCT room.id)", "roomIds")
-                .addSelect("GROUP_CONCAT(DISTINCT roomImages.imageUrl)", "imageUrls") 
+                .addSelect("GROUP_CONCAT(DISTINCT roomImages.imageUrl)", "imageUrls")
                 .groupBy("roomType.id, roomType.name, roomType.basePrice");
 
             if (bookedRoomIds.length > 0) {
@@ -100,17 +108,17 @@ class BookingService {
             }
 
             const rawResults = await query.getRawMany();
-
+            console.log("rawResults", rawResults);
             const totalAvailableRooms = rawResults.reduce((sum, room) => sum + Number(room.totalRooms), 0);
 
-            if(totalAvailableRooms > Number(searchParams.roomNumber)) {
+            if (totalAvailableRooms >= Number(searchParams.roomNumber)) {
                 const availableRooms = rawResults.map(room => ({
                     roomTypeId: room.roomTypeId,
                     roomTypeName: room.roomTypeName,
                     totalRooms: Number(room.totalRooms),
                     basePrice: room.basePrice,
                     availableRoomIds: room.roomIds ? room.roomIds.split(',').map(Number) : [],
-                    images: room.imageUrls ? 
+                    images: room.imageUrls ?
                         [...new Set(room.imageUrls.split(','))] : // Loại bỏ các URL trùng lặp
                         []
                 }));
@@ -119,7 +127,7 @@ class BookingService {
                     availableRooms,
                     hotel
                 };
-            }else{
+            } else {
                 return { availableRooms: [], hotel: null };
             }
         } catch (error: any) {
@@ -130,6 +138,7 @@ class BookingService {
         const hotel = await hotelRepository.findOne({ where: { id: hotelId } });
         return hotel;
     }
+
     public async calculateTotalPrice(bookingSession: BookingSession) {
         let totalPrice = 0;
         let extraAdultPrice = 0;
@@ -146,74 +155,81 @@ class BookingService {
 
             // Tính giá cơ bản cho số ngày ở
             let roomPrice = room.price * numberOfDays;
-            
-            if(totalGuests > 2) {
-                if(room.guests.adults - 2 > 0){
-                    extraAdultPrice = (room.guests.adults - 2) * 100 * numberOfDays;
+
+            if (totalGuests > 2) {
+                if (room.guests.adults - 2 > 0) {
+                    extraAdultPrice = extraAdultPrice + (room.guests.adults - 2) * 100 * numberOfDays;
                 }
-                extraChildPrice = (totalGuests - room.guests.adults) * 50 * numberOfDays;
-                roomPrice = roomPrice + extraAdultPrice + extraChildPrice;
-            }else{
+                console.log("extraAdultPrice", extraAdultPrice);
+                extraChildPrice = extraChildPrice + (totalGuests - room.guests.adults) * 50 * numberOfDays;
+            } else {
                 roomPrice = roomPrice;
             }
-            
+            console.log("roomPrice", roomPrice);
             totalPrice += roomPrice;
+            console.log("totalPrice", totalPrice);
         }
-
-        return {totalPrice, extraAdultPrice, extraChildPrice};
+        totalPrice = totalPrice + extraAdultPrice + extraChildPrice;
+        return { totalPrice, extraAdultPrice, extraChildPrice };
     }
-    // public async saveBooking(bookingSession: BookingSession) {
-    //     try {
-    //         // Kiểm tra phòng trống cho từng phòng trong booking session
-    //         for (const room of bookingSession.rooms) {
-    //             const searchParams = {
-    //                 hotelid: bookingSession.hotel.id,
-    //                 checkin: new Date(bookingSession.checkIn).toISOString().split("T")[0],
-    //                 checkout: new Date(bookingSession.checkOut).toISOString().split("T")[0],
-    //                 roomNumber: "1"
-    //             };
+    public async saveBooking(bookingSession: BookingSession, user: Users) {
+        try {
+            const roomCount = bookingSession.rooms.length;
+            const searchParams = {
+                hotelid: bookingSession.hotel.id,
+                checkin: new Date(bookingSession.checkIn).toISOString().split("T")[0],
+                checkout: new Date(bookingSession.checkOut).toISOString().split("T")[0],
+                roomNumber: roomCount.toString()
+            };
+            const availableRooms = await this.searchRoomAvailableWithRoomType(searchParams);
 
-    //             const availableRooms = await this.searchRoomAvailableWithRoomType(searchParams);
+            if(!availableRooms.availableRooms || availableRooms.availableRooms.length <= 0){
+                throw new Error ("Phòng trống đã hết")
+            }
+
+            // Bắt đầu transaction
+            return await AppDataSource.transaction(async (transactionalEntityManager) => {
+                const newBooking = new Bookings();
+                newBooking.userId = user.id;
+                newBooking.totalPrice = bookingSession.totalPrice;
+                newBooking.status = "PENDING";
+                newBooking.createdAt = new Date();
                 
-    //             // Kiểm tra xem loại phòng còn trống không
-    //             const roomTypeAvailable = availableRooms.availableRooms.find(
-    //                 (r) => r.roomTypeId === room.roomTypeId
-    //             );
+                const savedBooking = await transactionalEntityManager.save(newBooking);
+                console.log("Saved Booking ID:", savedBooking.id);
+                
+                for (const room of bookingSession.rooms) {
+                    const roomTypeAvailable = availableRooms.availableRooms.find(
+                        (r) => r.roomTypeId === room.roomTypeId
+                    );
+                    console.log("roomTypeAvailable", roomTypeAvailable);
+        
+                    if (!roomTypeAvailable || roomTypeAvailable.totalRooms < 1) {
+                        throw new Error(`Phòng ${room.roomTypeName} đã hết`);
+                    }else{
+                        roomTypeAvailable.totalRooms = roomTypeAvailable.totalRooms - 1;
+                        console.log("roomTypeAvailable", roomTypeAvailable.availableRoomIds);
+                        let roomId = roomTypeAvailable.availableRoomIds.shift();
+                        const bookingDetail = new BookingDetail();
+                        bookingDetail.bookingId = savedBooking.id;
+                        bookingDetail.checkInDate = new Date(bookingSession.checkIn).toISOString().split('T')[0];
+                        bookingDetail.checkOutDate = new Date(bookingSession.checkOut).toISOString().split('T')[0];
+                        bookingDetail.roomId = roomId;
+                        bookingDetail.adultNumber = room.guests.adults;
+                        bookingDetail.childNumber = room.guests.children;
+                        bookingDetail.babyNumber = room.guests.infants;
+                        bookingDetail.createdAt = new Date();
+            
+                        await transactionalEntityManager.save(bookingDetail);
+                    }
+                }
 
-    //             if (!roomTypeAvailable || roomTypeAvailable.availableCount < 1) {
-    //                 throw new Error(`Phòng ${room.roomTypeName} đã hết`);
-    //             }
-    //         }
-
-    //         // Nếu tất cả phòng đều còn trống, tiến hành lưu booking
-    //         const booking = await bookingRepository.save({
-    //             hotelId: bookingSession.hotel.id,
-    //             checkIn: bookingSession.checkIn,
-    //             checkOut: bookingSession.checkOut,
-    //             totalPrice: bookingSession.totalPrice,
-    //             extraAdultPrice: bookingSession.extraAdultPrice, 
-    //             extraChildPrice: bookingSession.extraChildPrice,
-    //             status: "PENDING",
-    //             createdAt: new Date()
-    //         });
-
-    //         // Lưu chi tiết từng phòng
-    //         for (const room of bookingSession.rooms) {
-    //             await bookingDetailRepository.save({
-    //                 bookingId: booking.id,
-    //                 roomTypeId: room.roomTypeId,
-    //                 price: room.price,
-    //                 numberOfAdults: room.guests.adults,
-    //                 numberOfChildren: room.guests.children
-    //             });
-    //         }
-
-    //         return booking;
-
-    //     } catch (error: any) {
-    //         throw new Error("Lỗi khi lưu booking: " + error.message);
-    //     }
-    // }
-    
+                return savedBooking;
+            });
+        } catch (error: any) {
+            throw new Error("Lỗi khi lưu booking: " + error.message);
+        }
+    }
 }
+
 export default BookingService;

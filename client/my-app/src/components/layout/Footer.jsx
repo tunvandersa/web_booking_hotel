@@ -29,9 +29,9 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div className="flex flex-col items-center">
+          <div>
             <h4 className="font-bold mb-4">Kết nối với chúng tôi</h4>
-            <div className="flex gap-4 ">
+            <div className="flex gap-4 justify-center">
               <span className="material-icons">facebook</span>
               <span className="material-icons">public</span>
               <span className="material-icons">mail</span>

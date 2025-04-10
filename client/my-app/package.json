@@ -12,6 +12,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@tailwindcss/vite": "^4.0.12",
+    "antd": "^5.24.6",
     "axios": "^1.8.4",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
