@@ -183,13 +183,22 @@
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 const SearchBar = ({ location, setLocation, startDate, setStartDate, endDate, setEndDate, roomSearchNumber, setRoomSearchNumber, handleSearch }) => {
+  const [local, setLocal] = useState([]);
+  useEffect(() => {
+    const fetchLocal = async () => {
+      const response = await axios.get("http://localhost:3000/api/v1/booking/locationhotel");
+      setLocal(response.data.local);
+    };
+    fetchLocal();
+  }, []);
   return (
     <div className="bg-[#00205B] py-4 sticky top-0 z-40">
       <div className="container mx-auto px-3">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 justify-center items-center">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 justify-center items-center">
           <div className="min-h-[90px]"> {/* Thêm min-height để giữ chiều cao cố định */}
             <label className="text-white mb-2 block text-sm h-8">Bạn muốn nghỉ dưỡng ở đâu ?</label>
             <div className="relative h-[42px] flex items-center justify-center"> {/* Cố định chiều cao cho input container */}
@@ -204,9 +213,9 @@ const SearchBar = ({ location, setLocation, startDate, setStartDate, endDate, se
                 <option value="" disabled>
                   Chọn điểm đến
                 </option>
-                <option value="1">Hà Nội</option>
-                <option value="3">Quảng Ninh</option>
-                <option value="2">Đà Nẵng</option>
+                {local.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
               </select>
               <span className="absolute right-3 bottom-1 text-gray-400">
                 <span className="material-icons text-[20px]">arrow_drop_down</span>
@@ -257,20 +266,6 @@ const SearchBar = ({ location, setLocation, startDate, setStartDate, endDate, se
                 value={roomSearchNumber}
                 min={1}
                 onChange={(e) => setRoomSearchNumber(Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          <div className="min-h-[90px]">
-            <label className="text-white mb-2 block text-sm h-8">Mã khuyến mãi/Voucher</label>
-            <div className="relative h-[42px] flex justify-center items-center">
-              <span className="absolute left-3 flex justify-center items-center  text-gray-400">
-                <span className="material-icons text-[20px]">local_offer</span>
-              </span>
-              <input
-                type="text"
-                className="w-full h-full px-2 pl-10 rounded border border-gray-300 text-sm"
-                placeholder="Nhập mã khuyến mãi"
               />
             </div>
           </div>

@@ -28,6 +28,13 @@ export class HotelAmenities {
   })
   description?: string | null;
 
+  @Column("text", {
+    name: "image",
+    nullable: true,
+    comment: "Hình ảnh tiện nghi",
+  })
+  image?: string | null;
+
   @Column("tinyint", {
     name: "is_free",
     nullable: true,

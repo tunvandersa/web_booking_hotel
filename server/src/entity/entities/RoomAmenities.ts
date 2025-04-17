@@ -28,6 +28,13 @@ export class RoomAmenities {
   })
   description?: string | null;
 
+  @Column("text", {
+    name: "image",
+    nullable: true,
+    comment: "Ảnh tiện nghi",
+  })
+  image?: string | null;
+
   @Column("tinyint", {
     name: "is_free",
     nullable: true,

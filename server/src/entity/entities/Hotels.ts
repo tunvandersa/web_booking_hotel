@@ -28,6 +28,15 @@ export class Hotels {
   })
   description?: string | null;
 
+  @Column("text", { name: "image", nullable: true, comment: "Ảnh khách sạn" })
+  image?: string | null;
+
+  @Column("text", { name: "phone", nullable: true, comment: "Số điện thoại" })
+  phone?: string | null;
+
+  @Column("text", { name: "email", nullable: true, comment: "Email" })
+  email?: string | null;
+
   @Column("tinyint", { name: "star_rating", comment: "Xếp hạng sao (1-5)" })
   starRating?: number;
 
@@ -85,7 +94,14 @@ export class Hotels {
     default: () => "CURRENT_TIMESTAMP",
   })
   updatedAt?: Date | null;
- 
+  @Column("tinyint", {
+    name: "is_active",
+    nullable: true,
+    width: 1,
+    default: () => "'1'",
+  })
+  isActive?: boolean | null;
+
   @OneToMany(
     () => HotelAmenityMapping,
     (hotelAmenityMapping) => hotelAmenityMapping.hotel

@@ -4,16 +4,18 @@ import { Like } from "typeorm";
 import { RoomImages } from "@entities/RoomImages";
 import { RoomTypes } from "@entities/RoomTypes";
 import { Rooms } from "@entities/Rooms";
-
-
+import { HotelAmenities } from "@entities/HotelAmenities";
+import { HotelAmenityMapping } from "@entities/HotelAmenityMapping";
 const hotelRepository = AppDataSource.getRepository(Hotels);
 const roomImagesRepository = AppDataSource.getRepository(RoomImages);
 const roomTypeRepository = AppDataSource.getRepository(RoomTypes);
 const roomRepository = AppDataSource.getRepository(Rooms);
+const amenityRepository = AppDataSource.getRepository(HotelAmenities);
+const hotelAmenityMappingRepository = AppDataSource.getRepository(HotelAmenityMapping);
 class HotelService {
     public async getAllHotel(): Promise<any> {
         try {
-            const hotel = await hotelRepository.find();
+            const hotel = await hotelRepository.find({where: {isActive: true}});
             return hotel;
         } catch (err) {
             return err;
@@ -49,9 +51,6 @@ class HotelService {
         }
     }
 
-    public async getAllRoomByHotelId(hotelId: number): Promise<any> {
-
-    }
 
     // public async getRoomTypeByHotelId(hotelId: number): Promise<any> {
     //     try {
@@ -142,7 +141,140 @@ class HotelService {
             return error;
         }
     }
+    public async createHotel(hotel: any): Promise<any> {
+        try {
 
+            const newHotel = {
+                name: hotel.name,
+                description: hotel.description,
+                address: hotel.address,
+                city: hotel.city,
+                country: hotel.country,
+                checkInTime: hotel.checkInTime,
+                checkOutTime: hotel.checkOutTime,
+                starRating: hotel.starRating,
+                image: hotel.image,
+                isActive: true,
+                phone: hotel.phone,
+                email: hotel.email,
+            };
+
+            const result = await hotelRepository.save(newHotel);
+            for(let i = 0; i < hotel.amenities.length; i++) {
+               await hotelAmenityMappingRepository.save({
+                    hotelId: result.id,
+                    amenityId: hotel.amenities[i],
+                }); 
+            }
+            return result;
+        } catch (error) {
+            return error;
+        }
+    }
+
+    public async deleteHotel(id: string): Promise<any> {
+        try {
+            const deletedHotel = await hotelRepository.update(id, {isActive: false});
+            return deletedHotel;
+        } catch (error) {
+            return error;
+        }
+    }
+    public async getAmenitiesHotel(): Promise<any> {
+        try {
+            const amenities = await amenityRepository.find({where: {isActive: true}});
+            return amenities;
+        } catch (error) {
+            return error;
+        }
+    }
+    public async createAmenityHotel(amenity: HotelAmenities): Promise<any> {
+        try {
+            const newAmenity = await amenityRepository.save(amenity);
+            return newAmenity;
+        } catch (error) {
+            return error;
+        }
+    }
+    public async updateAmenityHotel(amenity: HotelAmenities, id: string): Promise<any> {
+        try {
+            const updatedAmenity = await amenityRepository.update(id, amenity);
+            return updatedAmenity;
+        } catch (error) {
+            return error;
+        }
+    }
+    public async deleteAmenityHotel(id: string): Promise<any> {
+        try {
+            const deletedAmenity = await amenityRepository.update(id, {isActive: false});
+            return deletedAmenity;
+        } catch (error) {
+            return error;
+        }
+    }
+    public async getAmenitiesHotelById(id: string): Promise<any> {
+        try {
+            const amenities = await amenityRepository.findOne({where: {id: id}});
+            console.log(amenities);
+            return amenities;
+        } catch (error) {
+            return error;
+        }
+    }
+    public async getHotelById(hotelId: string): Promise<any> {
+        try {
+            // Lấy thông tin khách sạn theo id
+            const hotel = await hotelRepository.findOne({
+                where: { id: hotelId, isActive: true }
+            });
+
+            if (!hotel) {
+                return { success: false, message: "Không tìm thấy khách sạn" };
+            }
+
+            // Lấy danh sách tiện nghi của khách sạ
+            return hotel;
+        } catch (error) {
+            console.error("Lỗi khi lấy thông tin khách sạn :", error);
+            return {
+                success: false,
+                message: "Đã xảy ra lỗi khi lấy thông tin khách sạn",
+                error: error
+            };
+        }
+    }
+    public async updateHotel(hotel: any, id: string): Promise<any> {
+        try {
+            console.log(hotel);
+            const newHotel = {
+                name: hotel.name,
+                description: hotel.description,
+                address: hotel.address,
+                city: hotel.city,
+                country: hotel.country,
+                checkInTime: hotel.checkInTime,
+                checkOutTime: hotel.checkOutTime,
+                starRating: hotel.starRating,
+                image: hotel.image,
+                isActive: true,
+                phone: hotel.phone,
+                email: hotel.email,
+            };
+            console.log(newHotel);
+            const result = await hotelRepository.update(id, newHotel);
+            console.log(result);
+            await hotelAmenityMappingRepository.delete({hotelId: id});
+            for(let i = 0; i < hotel.amenities.length; i++) {
+                await hotelAmenityMappingRepository.save({
+                    hotelId: id,
+                    amenityId: hotel.amenities[i],
+                }); 
+            }
+            return result;
+        } catch (error) {
+            return error;
+        }
+    }   
 }
 
 export default HotelService;

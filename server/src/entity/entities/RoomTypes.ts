@@ -48,6 +48,13 @@ export class RoomTypes {
   })
   sizeSqm?: string | null;
 
+  @Column("tinyint", {
+    name: "is_active",
+    default: () => "'1'",
+    comment: "Trạng thái",
+  })
+  isActive?: boolean;
+
   @Column("decimal", {
     name: "extra_child_price",
     nullable: true,

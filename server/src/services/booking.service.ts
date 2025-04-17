@@ -6,13 +6,18 @@ import { Bookings } from "@entities/Bookings";
 import { BookingDetail } from "@entities/BookingDetails";
 import { Users } from "@entities/Users";
 import AuthService from "./auth.service";
+import { HotelLocation } from "@entities/HotelLocation";
+import Vnpay from "vnpay";
+import crypto from "crypto";
+import moment from "moment";
+import qs from "qs";
 
 
 const roomRepository = AppDataSource.getRepository(Rooms);
 const hotelRepository = AppDataSource.getRepository(Hotels);
 const bookingRepository = AppDataSource.getRepository(Bookings);
 const bookingDetailRepository = AppDataSource.getRepository(BookingDetail);
-
+const locationRepository = AppDataSource.getRepository(HotelLocation);
 
 class BookingService {
     public async searchAvailableRooms(searchParams: {
@@ -54,9 +59,10 @@ class BookingService {
                 .addSelect("hotel.city", "city")
                 .addSelect("hotel.country", "country")
                 .addSelect("hotel.address", "address")
+                .addSelect("hotel.image", "image")
                 .addSelect("COUNT(room.id)", "totalRooms")
                 .addSelect("MIN(roomType.basePrice)", "minPrice")
-                .groupBy("hotel.id, hotel.name, hotel.city, hotel.country, hotel.address")
+                .groupBy("hotel.id, hotel.name, hotel.city, hotel.country, hotel.address, hotel.image")
                 .having("totalRooms >= :roomNumber", { roomNumber: searchParams.roomNumber })  // Kiểm tra số phòng đủ
                 .getRawMany();
 
@@ -97,8 +103,8 @@ class BookingService {
                 .addSelect("COUNT(DISTINCT room.id)", "totalRooms")
                 .addSelect("roomType.basePrice", "basePrice")
                 .addSelect("GROUP_CONCAT(DISTINCT room.id)", "roomIds")
-                .addSelect("GROUP_CONCAT(DISTINCT roomImages.imageUrl)", "imageUrls")
-                .groupBy("roomType.id, roomType.name, roomType.basePrice");
+                .addSelect("roomImages.imageUrl", "imageUrls")
+                .groupBy("roomType.id, roomType.name, roomType.basePrice, roomImages.imageUrl");
 
             if (bookedRoomIds.length > 0) {
                 query.andWhere("room.id NOT IN (:...bookedRoomIds)", { bookedRoomIds });
@@ -118,9 +124,8 @@ class BookingService {
                     totalRooms: Number(room.totalRooms),
                     basePrice: room.basePrice,
                     availableRoomIds: room.roomIds ? room.roomIds.split(',').map(Number) : [],
-                    images: room.imageUrls ?
-                        [...new Set(room.imageUrls.split(','))] : // Loại bỏ các URL trùng lặp
-                        []
+                    images: room.imageUrls
+                       
                 }));
                 const hotel = await this.getHotelById(searchParams.hotelid);
                 return {
@@ -158,10 +163,10 @@ class BookingService {
 
             if (totalGuests > 2) {
                 if (room.guests.adults - 2 > 0) {
-                    extraAdultPrice = extraAdultPrice + (room.guests.adults - 2) * 100 * numberOfDays;
+                    extraAdultPrice = extraAdultPrice + (room.guests.adults - 2) * 100000 * numberOfDays;
                 }
                 console.log("extraAdultPrice", extraAdultPrice);
-                extraChildPrice = extraChildPrice + (totalGuests - room.guests.adults) * 50 * numberOfDays;
+                extraChildPrice = extraChildPrice + (totalGuests - room.guests.adults) * 50000 * numberOfDays;
             } else {
                 roomPrice = roomPrice;
             }
@@ -229,6 +234,10 @@ class BookingService {
         } catch (error: any) {
             throw new Error("Lỗi khi lưu booking: " + error.message);
         }
+    }
+    public async getlocalHotel() {
+        const local = await locationRepository.find();
+        return local;
     }
 }
 

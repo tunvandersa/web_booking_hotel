@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import { Form, Input, InputNumber, Select, Button, Upload, Typography, Switch, message, Card, Divider } from 'antd';
 import { PlusOutlined, UploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -12,19 +12,16 @@ const CreateHotel = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [amenities, setAmenities] = useState([]);
   const navigate = useNavigate();
 
-  const amenitiesOptions = [
-    { label: 'Hồ bơi', value: 'Hồ bơi' },
-    { label: 'Spa', value: 'Spa' },
-    { label: 'Nhà hàng', value: 'Nhà hàng' },
-    { label: 'Phòng gym', value: 'Phòng gym' },
-    { label: 'Quầy bar', value: 'Quầy bar' },
-    { label: 'Wifi miễn phí', value: 'Wifi miễn phí' },
-    { label: 'Đưa đón sân bay', value: 'Đưa đón sân bay' },
-    { label: 'Sân golf', value: 'Sân golf' },
-    { label: 'Phòng hội nghị', value: 'Phòng hội nghị' },
-  ];
+  useEffect(() => {
+    const fetchAmenities = async () => {
+      const response = await axios.get('http://localhost:3000/api/v1/hotel/getamenitieshotel');
+      setAmenities(response.data.amenitiesHotel);
+    };
+    fetchAmenities();
+  }, []);
 
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList(newFileList);
@@ -38,28 +35,38 @@ const CreateHotel = () => {
       const formData = new FormData();
       fileList.forEach(file => {
         if (file.originFileObj) {
-          formData.append('images', file.originFileObj);
+          formData.append('image', file.originFileObj);
         }
       });
       
       // Thêm các trường dữ liệu khác
-      Object.keys(values).forEach(key => {
-        if (key !== 'images') {
-          if (key === 'amenities') {
-            formData.append(key, JSON.stringify(values[key]));
-          } else {
-            formData.append(key, values[key]);
-          }
+      const hotelData = {
+        name: values.name,
+        address: values.address,
+        city: values.city,
+        country: values.country,
+        description: values.description,
+        starRating: values.starRating,
+        amenities: values.amenities,
+        checkInTime: values.checkInTime,
+        checkOutTime: values.checkOutTime,
+        phone: values.phone,
+        email: values.email,
+      };
+      console.log(hotelData);
+      formData.append('hotel', JSON.stringify(hotelData));
+      
+      console.log(formData);
+
+      const response = await axios.post('http://localhost:3000/api/v1/hotel/create', formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
         }
       });
       
-      // Gửi request tạo khách sạn mới
-      // await axios.post('http://localhost:8080/api/hotels', formData, {
-      //   headers: { 'Content-Type': 'multipart/form-data' }
-      // });
-      
-      message.success('Tạo khách sạn mới thành công!');
-      navigate('/hotels');
+      if (response.data) {
+        message.success('Tạo khách sạn mới thành công!');
+      }
     } catch (error) {
       console.error('Lỗi khi tạo khách sạn:', error);
       message.error('Đã xảy ra lỗi khi tạo khách sạn. Vui lòng thử lại!');
@@ -87,8 +94,9 @@ const CreateHotel = () => {
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            status: true,
-            stars: 3,
+            country: 'Việt Nam',
+            checkInTime: '14:00',
+            checkOutTime: '12:00'
           }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -110,37 +118,69 @@ const CreateHotel = () => {
               </Form.Item>
 
               <Form.Item
-                name="stars"
+                name="city"
+                label="Thành phố"
+                rules={[{ required: true, message: 'Vui lòng nhập thành phố!' }]}
+              >
+                <Input placeholder="Nhập thành phố" />
+              </Form.Item>
+
+              <Form.Item
+                name="country"
+                label="Quốc gia"
+                rules={[{ required: true, message: 'Vui lòng nhập quốc gia!' }]}
+              >
+                <Input placeholder="Nhập quốc gia" />
+              </Form.Item>
+
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập số điện thoại!' },
+                  { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại không hợp lệ!' }
+                ]}
+              >
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập email!' },
+                  { type: 'email', message: 'Email không hợp lệ!' }
+                ]}
+              >
+                <Input placeholder="Nhập email" />
+              </Form.Item>
+
+
+              <Form.Item
+                name="starRating"
                 label="Số sao"
                 rules={[{ required: true, message: 'Vui lòng chọn số sao!' }]}
               >
                 <InputNumber min={1} max={5} className="w-full" />
               </Form.Item>
 
+
               <Form.Item
-                name="minPrice"
-                label="Giá phòng thấp nhất (VNĐ)"
-                rules={[{ required: true, message: 'Vui lòng nhập giá phòng thấp nhất!' }]}
+                name="checkInTime"
+                label="Giờ nhận phòng"
+                rules={[{ required: true, message: 'Vui lòng nhập giờ nhận phòng!' }]}
               >
-                <InputNumber
-                  min={0}
-                  step={100000}
-                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                  className="w-full"
-                  placeholder="Nhập giá phòng thấp nhất"
-                />
+                <Input placeholder="VD: 14:00" />
               </Form.Item>
 
               <Form.Item
-                name="status"
-                label="Trạng thái"
-                valuePropName="checked"
+                name="checkOutTime"
+                label="Giờ trả phòng"
+                rules={[{ required: true, message: 'Vui lòng nhập giờ trả phòng!' }]}
               >
-                <Switch checkedChildren="Hoạt động" unCheckedChildren="Tạm ngưng" />
+                <Input placeholder="VD: 12:00" />
               </Form.Item>
             </div>
-
             <div>
               <Form.Item
                 name="description"
@@ -158,14 +198,17 @@ const CreateHotel = () => {
                 <Select
                   mode="multiple"
                   placeholder="Chọn tiện nghi"
-                  options={amenitiesOptions}
+                  options={amenities.map(amenity => ({
+                    value: amenity.id,
+                    label: amenity.name
+                  })) }
                 />
               </Form.Item>
 
               <Form.Item
                 name="images"
                 label="Hình ảnh khách sạn"
-                rules={[{ required: true, message: 'Vui lòng tải lên ít nhất một hình ảnh!' }]}
+                rules={[{ message: 'Vui lòng tải lên ít nhất một hình ảnh!' }]}
               >
                 <Upload
                   listType="picture-card"

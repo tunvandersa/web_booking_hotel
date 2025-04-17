@@ -7,10 +7,31 @@ import router from "./routers/apiRouter";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import session from "express-session";
+import multer from 'multer';
+import path from 'path';
+import { conditionalUpload } from "./middleware/customUploadMiddleware";
+// ... existing code ...
+
+
 dotenv.config();
+
+// Cấu hình nơi lưu ảnh và tên ảnh
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Lưu vào thư mục uploads
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
+    cb(null, uniqueName);
+  },
+});
+
+export const upload = multer({ storage });
+
 
 const app: Express = express();
 const port = process.env.PORT;
+app.use('/uploads', express.static('uploads'));
 app.use(cookieParser())
 app.use(cors({
   origin: "http://localhost:5173", // Cho phép frontend React truy cập
@@ -18,6 +39,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true 
 }));
+
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
 ;
@@ -44,7 +66,7 @@ process.exit(1)  // exit with error code 1 to indicate failure to connect to the
 });
 
 
-app.use('/api/v1', router);
+app.use('/api/v1', conditionalUpload, router);
 
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);

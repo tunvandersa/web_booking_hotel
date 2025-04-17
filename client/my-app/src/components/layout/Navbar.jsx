@@ -14,6 +14,7 @@ import {
 import { Link } from 'react-router-dom';
 import SVLogo from "../../assets/SV_logo.webp";
 import axios from 'axios';
+import { useHotel } from '../hook/HotelContext';
 
 const { Sider } = Layout;
 const { Option } = Select;
@@ -92,9 +93,34 @@ const Navbar = () => {
           label: <Link to="/bookings">Quản lý đặt phòng</Link>,
         },
         {
-          key: 'staff',
-          icon: <TeamOutlined />,
-          label: <Link to="/staff">Quản lý nhân viên</Link>,
+          key: 'amenities-room-types',
+          icon: <SettingOutlined />,
+          label: <Link to="/amenities-room-types">Quản lý tiện ích phòng</Link>,
+          children: [
+            {
+              key: 'amenities-room-types-list',
+              label: <Link to="/amenities-room-types">Danh sách tiện ích phòng</Link>,
+            },
+            {
+              key: 'amenities-room-types-add',
+              label: <Link to="/amenities-room-types/add">Thêm tiện ích phòng</Link>,
+            },
+          ],
+        },
+        {
+          key: 'amenities-hotel',
+          icon: <SettingOutlined />,
+          label: <Link to="/amenities-hotel">Quản lý tiện ích khách sạn</Link>,
+          children: [
+            {
+              key: 'amenities-hotel-list',
+              label: <Link to="/amenities-hotel">DS tiện ích khách sạn</Link>,
+            },
+            {
+              key: 'amenities-hotel-add',
+              label: <Link to="/amenities-hotel/add">Thêm tiện ích khách sạn</Link>,
+            },
+          ],
         },
         {
           type: 'divider',
@@ -105,20 +131,21 @@ const Navbar = () => {
           label: <Link to="/logout" className="text-red-500">Đăng xuất</Link>,
         },
       ];
+
   const [collapsed, setCollapsed] = useState(false);
   const [hotels, setHotels] = useState([]);
-  const [selectedHotel, setSelectedHotel] = useState(null);
+  const { selectedHotel, setSelectedHotel } = useHotel();
 
   useEffect(() => {
-    // Giả lập dữ liệu khách sạn - thay thế bằng API call thực tế
-    const mockHotels = [
-      { id: 1, name: 'Khách sạn Hà Nội' },
-      { id: 2, name: 'Khách sạn Đà Nẵng' },
-      { id: 3, name: 'Khách sạn Hồ Chí Minh' },
-      { id: 4, name: 'Khách sạn Nha Trang' },
-    ];
-    setHotels(mockHotels);
-    setSelectedHotel(mockHotels[0]?.id);
+    const fetchHotels = async () => {
+      const response = await axios.get('http://localhost:3000/api/v1/hotel/list');
+      setHotels(response.data.hotel);
+      if (!selectedHotel && response.data.hotel.length > 0) {
+        setSelectedHotel(response.data.hotel[0].id);
+      }
+      console.log(selectedHotel);
+    };
+    fetchHotels();
   }, []);
 
   const handleHotelChange = (value) => {

@@ -28,10 +28,9 @@ function LoginPages() {
       const response = await axios.post('http://localhost:3000/api/v1/login', {
         email: formData.email,
         password: formData.password
-      }, { 
-        headers: {
-        'Content-Type': 'application/json'
-      }});
+      }, {
+        withCredentials: true,
+      });
       console.log(formData.email, formData.password);
       console.log(response.data.user);
       if (response.data.user) {

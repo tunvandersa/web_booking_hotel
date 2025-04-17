@@ -1,7 +1,19 @@
 import BookingService from "@services/booking.service";
 import { Request, Response } from "express";
 import {Users} from "@entities/Users"
+import jwt from "jsonwebtoken";
+import { AppDataSource } from "@databases/data.source";
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+interface DecodedToken {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+}
+const userRepository = AppDataSource.getRepository(Users);
 class BookingController {
     private bookingService: BookingService;
 
@@ -32,13 +44,23 @@ class BookingController {
     }  
     public async searchRoomAvailableWithRoomType(req: Request, res: Response) {
         const { hotelid, checkin, checkout, roomNumber } = req.query;
+
+        if (!checkin || isNaN(Date.parse(checkin as string))) {
+          return res.status(400).json({ message: "Ngày checkin không hợp lệ" });
+        }
+        
+        if (!checkout || isNaN(Date.parse(checkout as string))) {
+          return res.status(400).json({ message: "Ngày checkout không hợp lệ" });
+        }
+        
         const searchParams = {
-            hotelid: hotelid as string,
-            checkin: new Date(checkin as string).toISOString().split("T")[0],
-            checkout: new Date(checkout as string).toISOString().split("T")[0],
-            roomNumber: roomNumber as string,
+          hotelid: hotelid as string,
+          checkin: new Date(checkin as string).toISOString().split("T")[0],
+          checkout: new Date(checkout as string).toISOString().split("T")[0],
+          roomNumber: roomNumber as string,
         };
-        console.log(searchParams);
+        
+        console.log(searchParams);             
         try{
             const data = await this.bookingService.searchRoomAvailableWithRoomType(searchParams);
             
@@ -64,7 +86,7 @@ class BookingController {
     public async addRoomToSession(req: Request, res: Response) {
         try {
             const { hotelId, hotelName, checkIn, checkOut, index, roomTypeId, roomTypeName, price, guests } = req.body;
-        
+            console.log("req.body", req.body);
             // Nếu session chưa tồn tại, tạo mới
             if (!req.session.booking) {
                 req.session.booking = {
@@ -159,18 +181,34 @@ class BookingController {
         }
     }
     public async saveBooking(req: Request, res: Response) {
-        if(!req.session.booking) {
-            return res.status(400).json({message: "Không tìm thấy session"});
-        }
-        const user = new Users();
-        user.id = 1;
+        
         try {
+            if(!req.session.booking) {
+                return res.status(400).json({message: "Không tìm thấy session"});
+            }
+           const userToken = req.cookies.accessToken;
+           const decoded = jwt.verify(userToken, JWT_SECRET) as DecodedToken;
+           const userId = decoded.id;
+           const user = await userRepository.findOne({where: {id: Number(userId)}});
+           console.log("user", user);
+           if(!user) {
+            return res.status(400).json({message: "Không tìm thấy user"});
+           }
             const booking = await this.bookingService.saveBooking(req.session.booking, user);
             return res.status(200).json({message: "Đã lưu booking thành công", booking});
         } catch (error: any) {
             return res.status(500).json({message: error.message});
         }
     }
+    public async getlocalHotel(req: Request, res: Response) {
+        try {
+            const local = await this.bookingService.getlocalHotel();
+            return res.status(200).json({local});
+        } catch (error: any) {
+            return res.status(500).json({message: error.message});
+        }
+    }
+    
 }
 
 export default BookingController;   

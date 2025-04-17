@@ -8,7 +8,7 @@ const HotelSearchCard = ({ hotels, handleDetailHotel }) => {
           {/* Ảnh khách sạn */}
           <div className="relative w-1/4">
             <img
-              src="https://booking.muongthanh.com/images/hotels/hotels/original/muong-thanh-luxury-ha-long-centre_1729839613.jpg"
+              src={`http://localhost:3000/uploads/${hotel.image}`}
               alt={hotel.hotelName}
               className="w-[300px] h-[200px] object-cover rounded-lg"
             />

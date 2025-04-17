@@ -27,6 +27,7 @@ export class Rooms {
   @Column("varchar", { name: "room_number", comment: "Số phòng", length: 20 })
   roomNumber?: string;
 
+  
   @Column("varchar", {
     name: "floor",
     nullable: true,
@@ -42,6 +43,14 @@ export class Rooms {
     default:'AVAILABLE',
   })
   status?: "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "CLEANING";
+
+  @Column("tinyint", {
+    name: "is_active",
+    nullable: true,
+    width: 1,
+    default: () => "'1'",
+  })
+  isActive?: boolean | null;
 
   @Column("timestamp", {
     name: "created_at",
